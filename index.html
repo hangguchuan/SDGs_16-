@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDGs 16タイプ性格診断</title>
+    <!-- Tailwind CSS CDN for fast & clean styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-6 md:p-8" id="app">
+        <!-- スタート画面 -->
+        <div id="start-screen" class="text-center">
+            <h1 class="text-2xl font-bold mb-4 text-emerald-600">🌍 SDGs 16タイプ性格診断</h1>
+            <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+                8つの質問に直感で答えるだけで、あなたのSDGsスタイルと「今日からできる一歩」がわかります。<br>診断が終わったら、結果画面の指定シールの色を会場のボードに貼ってね！
+            </p>
+            <button onclick="startQuiz()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-lg shadow-emerald-600/20">
+                診断をはじめる 🚀
+            </button>
+        </div>
+
+        <!-- 質問画面 -->
+        <div id="quiz-screen" class="hidden">
+            <div class="mb-4 flex justify-between text-xs font-semibold text-slate-400">
+                <span id="question-progress">Q1 / 8</span>
+                <span id="axis-indicator"></span>
+            </div>
+            <h2 id="question-text" class="text-lg font-bold mb-6 text-slate-700 min-h-[3.5rem]"></h2>
+            <div class="space-y-3">
+                <button onclick="answer('A')" id="btn-a" class="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition duration-150 font-medium text-sm text-slate-700"></button>
+                <button onclick="answer('B')" id="btn-b" class="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition duration-150 font-medium text-sm text-slate-700"></button>
+            </div>
+        </div>
+
+        <!-- 結果画面 -->
+        <div id="result-screen" class="hidden">
+            <div class="text-center mb-6">
+                <span class="text-xs font-bold px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full">あなたの診断結果</span>
+                <h1 id="result-title" class="text-xl font-extrabold text-slate-800 mt-2"></h1>
+                <p id="result-catch" class="text-sm text-slate-500 mt-1 italic"></p>
+            </div>
+
+            <!-- シール案内バナー -->
+            <div id="result-seal-box" class="p-4 rounded-xl border-2 mb-6 text-center">
+                <p class="text-xs font-bold uppercase tracking-wider mb-1">📍 ブース体験ステップ</p>
+                <p id="result-seal-text" class="text-sm font-bold"></p>
+            </div>
+
+            <div class="space-y-4 text-sm text-slate-600 mb-6 bg-slate-50 p-4 rounded-xl">
+                <div>
+                    <span class="font-bold text-slate-700 block mb-1">🌱 特徴・強み</span>
+                    <p id="result-desc"></p>
+                </div>
+                <div>
+                    <span class="font-bold text-slate-700 block mb-1">🎯 関連SDGs</span>
+                    <p id="result-sdgs" class="font-semibold text-emerald-600"></p>
+                </div>
+                <div>
+                    <span class="font-bold text-slate-700 block mb-1">🤝 相性の良い相棒</span>
+                    <p id="result-partner" class="font-medium text-slate-700"></p>
+                </div>
+                <div>
+                    <span class="font-bold text-slate-700 block mb-1">💡 日常でできるライトな一歩</span>
+                    <p id="result-step" class="text-slate-700 font-medium"></p>
+                </div>
+            </div>
+
+            <button onclick="location.reload()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl transition duration-200">
+                もう一度診断する 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 質問データ (Q1~Q8)
+        const questions = [
+            { q: "ニュースやSNSで、思わず目や心が留まるのはどっち？", a: "気候変動やゴミ問題などの「環境・自然問題」", b: "生きづらさや不平等などの「人・社会問題」", axis1: "E", axis2: "P" },
+            { q: "「世界が良くなった」と感じる瞬間はどっち？", a: "地球環境が守られ、エネルギーの無駄がなくなったとき", b: "誰もが差別なく、自分らしく安心して暮らせているとき", axis1: "E", axis2: "P" },
+            { q: "大きな課題を解決するとき、期待したいのはどっち？", a: "新しいアプリやAI、画期的な「仕組み」の導入", b: "一人ひとりの意識改革や日々の「対話・習慣」", axis1: "T", axis2: "A" },
+            { q: "自分の得意なアプローチに近いのはどっち？", a: "ツールやシステム、データを活用して効率よく進めること", b: "手足を動かしたり、人とコミュニケーションをとって進めること", axis1: "T", axis2: "A" },
+            { q: "物を考えるとき、自然と意識が向くのはどっち？", a: "街全体、大学全体など「大きな全体の構造」", b: "自分自身や目の前の友人など「身近な現場・足元」", axis1: "M", axis2: "I" },
+            { q: "理想的な変化のスタート地点はどこだと思う？", a: "ルールや制度、システムなど「社会の仕組み」を変えること", b: "一人ひとりの生活や行動など「個人の日常」から変えていくこと", axis1: "M", axis2: "I" },
+            { q: "グループワーク等で、テンションが上がるのはどっち？", a: "データを分析したり、ゼロから新しい企画を「立ち上げること」", b: "良いアイデアを周りに「広めたり」、現場で「継続実行すること」", axis1: "C", axis2: "S" },
+            { q: "自分の強みだと思うのはどっち？", a: "分析力・発想力（「なぜ？」「どう作るか？」を深く考える力）", b: "共感力・実行力（「いいね！」と周りに伝えたり実践する力）", axis1: "C", axis2: "S" }
+        ];
+
+        // 16タイプの詳細データ
+        const typesData = {
+            "E-T-M-C": { title: "E-T-M-C：都市インフラ・デザイナー", catch: "街や社会の仕組みをアップデート！未来のスマートシティを描く構造派", seal: "会場ボードの【E-T-M-C】の枠に【青色シール】を1枚貼ってね！", sealColor: "bg-blue-50 border-blue-200 text-blue-700", desc: "個人の努力だけに頼らず、交通システムや街全体のエネルギー循環など「マクロな仕組み」から解決を目指す広い視野の持ち主。", sdgs: "7, 9, 11, 13", partner: "P-A-M-C（コミュニティ・デザイナー）", step: "いつも通る駅や街のゴミ箱の配置を見て、「どうすればみんなが自然とエコに動けるか」の仕組みを想像してみる。" },
+            "E-T-M-S": { title: "E-T-M-S：資源循環ロジスティシャン", catch: "捨てるをゼロに！まわし続ける社会のルートを作る循環のプロ", seal: "会場ボードの【E-T-M-S】の枠に【青色シール】を1枚貼ってね！", sealColor: "bg-blue-50 border-blue-200 text-blue-700", desc: "「使って捨てる」から「まわし続ける」への転換を目指す実行派。リサイクル回収網やシェアリングサービスを広めるのが得意。", sdgs: "9, 12, 13, 14", partner: "E-A-I-C（フードロス・アイデアシェフ）", step: "ペットボトルや紙パックを捨てるときに、どんな製品に生まれ変わるか（リサイクルルート）を意識してしっかり分別する。" },
+            "E-T-I-C": { title: "E-T-I-C：スマート省エネアナリスト", catch: "データで無駄をあぶり出す！論理と効率で攻めるデジタル・エコ探偵", seal: "会場ボードの【E-T-I-C】の枠に【青色シール】を1枚貼ってね！", sealColor: "bg-blue-50 border-blue-200 text-blue-700", desc: "「なんとなくエコ」ではなく、数値やデータに基づいた確実な効果を追求するタイプ。電気代や通信量の無駄をロジカルに分析。", sdgs: "7, 9, 12, 13", partner: "E-A-M-S（サステナブル・インフルエンサー）", step: "スマホ内の不要なアプリや溜まったメール・重複写真を整理して通信電力を削減！" },
+            "E-T-I-S": { title: "E-T-I-S：次世代エコテック・ユーザー", catch: "最新技術でスマートに勝つ！テクノロジーを使いこなす環境実践派", seal: "会場ボードの【E-T-I-S】の枠に【青色シール】を1枚貼ってね！", sealColor: "bg-blue-50 border-blue-200 text-blue-700", desc: "「我慢する節約」ではなく技術の進化による解決にワクワクするタイプ。省エネ家電やEVなどの最新エコ技術を日常に賢く取り入れる。", sdgs: "7, 9, 11, 13", partner: "P-T-I-C（アクセシビリティ・エンジニア）", step: "家電の「省エネモード」をオンに設定したり、最新の省エネ家電やEVに関するニュースをチェックしてみる。" },
+            
+            "E-A-M-C": { title: "E-A-M-C：グリーン企画ファシリテーター", catch: "みんなの想いをカタチに！環境アクションの場を立ち上げる仕掛け人", seal: "会場ボードの【E-A-M-C】の枠に【緑色シール】を1枚貼ってね！", sealColor: "bg-emerald-50 border-emerald-200 text-emerald-700", desc: "地域の清掃活動やエコイベントなどをゼロから企画し、周りを巻き込んで盛り上げるのが得意。人の輪を広げるリーダーシップがある。", sdgs: "11, 13, 15, 17", partner: "P-T-M-S（ソーシャル・プラットフォーマー）", step: "地域のクリーン作戦やワークショップ、環境イベントの情報をSNSや街の掲示板で探してみる。" },
+            "E-A-M-S": { title: "E-A-M-S：サステナブル・インフルエンサー", catch: "オシャレに楽しく地球を守る！エコな暮らしのムーヴメントメーカー", seal: "会場ボードの【E-A-M-S】の枠に【緑色シール】を1枚貼ってね！", sealColor: "bg-emerald-50 border-emerald-200 text-emerald-700", desc: "堅苦しい環境話をセンス良く人に伝える発信力の持ち主。日常のエコな工夫を共有し、周りの意識を自然と変えていく。", sdgs: "12, 13, 14, 17", partner: "E-T-I-C（スマート省エネアナリスト）", step: "気に入っているエコグッズや、今日から試せるサステナブルなアイデアを1つSNSや友達にシェアしてみる。" },
+            "E-A-I-C": { title: "E-A-I-C：フードロス・アイデアシェフ", catch: "「もったいない」を「おいしい」へ！食から地球を救う工夫の天才", seal: "会場ボードの【E-A-I-C】の枠に【緑色シール】を1枚貼ってね！", sealColor: "bg-emerald-50 border-emerald-200 text-emerald-700", desc: "身近な「食」の廃棄問題に着目し、食材を無駄なく使い切るレシピや買い物の工夫をあみ出すタイプ。柔軟な発想力を持つ。", sdgs: "2, 12, 13, 15", partner: "E-T-M-S（資源循環ロジスティシャン）", step: "買い物時に手前にある賞味期限の近い商品から選ぶ「手前取り」を実践したり、冷蔵庫の余り食材で一品作ってみる。" },
+            "E-A-I-S": { title: "E-A-I-S：ゼロウェイスター", catch: "マイバッグ＆マイボトルは当たり前！ごみを極力作らない日常の達人", seal: "会場ボードの【E-A-I-S】の枠に【緑色シール】を1枚貼ってね！", sealColor: "bg-emerald-50 border-emerald-200 text-emerald-700", desc: "日々の暮らしの中で「ごみを出さない選択」をコツコツ徹底できる実践派。足元から地球に優しい暮らしを体現する。", sdgs: "12, 13, 14, 15", partner: "P-A-M-S（フェアトレード・アンバサダー）", step: "コンビニやお店でレジ袋やストローを辞退し、マイバッグやマイボトルを活用する。" },
+
+            "P-T-M-C": { title: "P-T-M-C：ダイバーシティ・アナリスト", catch: "データの力で「見えない格差」を可視化！社会の不平等に挑むロジカル派", seal: "会場ボードの【P-T-M-C】の枠に【黄色シール】を1枚貼ってね！", sealColor: "bg-amber-50 border-amber-200 text-amber-700", desc: "ジェンダーギャップや地域格差などの複雑な問題を、データや統計を用いて客観的に分析するタイプ。論理で問題の根底をあぶり出す。", sdgs: "5, 8, 10", partner: "P-A-M-S（フェアトレード・アンバサダー）", step: "性別や年齢ごとの意識調査データや、多様性に関する統計ニュースをひとつ意識して読んでみる。" },
+            "P-T-M-S": { title: "P-T-M-S：ソーシャル・プラットフォーマー", catch: "支援と想いをつなぐ架け橋！ネットと仕組みで社会を救うコレクター", seal: "会場ボードの【P-T-M-S】の枠に【黄色シール】を1枚貼ってね！", sealColor: "bg-amber-50 border-amber-200 text-amber-700", desc: "クラウドファンディングやマッチングアプリなど、「困っている人と支援したい人をつなぐ仕組み」を活用・普及させるのが得意。", sdgs: "1, 10, 17", partner: "E-A-M-C（グリーン企画ファシリテーター）", step: "クラウドファンディングサイトやボランティア募集サイトを覗いて、どんな仕組みがあるかチェックしてみる。" },
+            "P-T-I-C": { title: "P-T-I-C：アクセシビリティ・エンジニア", catch: "テクノロジーで「壁」を壊す！誰でも使えるバリアフリーの創作者", seal: "会場ボードの【P-T-I-C】の枠に【黄色シール】を1枚貼ってね！", sealColor: "bg-amber-50 border-amber-200 text-amber-700", desc: "障がいの有無や年齢に関わらず、すべての人がデジタル技術やサービスを快適に使える工夫（字幕、音声読み上げ等）を考え出す発想力。", sdgs: "4, 9, 10", partner: "E-T-I-S（次世代エコテック・ユーザー）", step: "スマホやPCのアクセシビリティ機能（文字拡大、コントラスト調整、音声読み上げなど）を実際に触って試してみる。" },
+            "P-T-I-S": { title: "P-T-I-S：エデュテック・ガイド", catch: "デジタルの力で学ぶ機会を均等に！情報格差をなくす学びのサポーター", seal: "会場ボードの【P-T-I-S】の枠に【黄色シール】を1枚貼ってね！", sealColor: "bg-amber-50 border-amber-200 text-amber-700", desc: "オンライン学習や翻訳ツールなどを活用し、誰もが平等に学びや情報にアクセスできる環境を身近なところで支えるタイプ。", sdgs: "4, 10", partner: "P-A-I-C（インクルーシブ・キャプテン）", step: "無料で学べるオンライン講座や翻訳アプリの便利な機能を、家族や身近な人に共有してみる。" },
+
+            "P-A-M-C": { title: "P-A-M-C：コミュニティ・デザイナー", catch: "誰もが「自分の居場所」を感じられる！あたたかい場の仕掛け人", seal: "会場ボードの【P-A-M-C】の枠に【赤色シール】を1枚貼ってね！", sealColor: "bg-rose-50 border-rose-200 text-rose-700", desc: "地域の交流イベントや、多様な人が集まれるサードプレイスをゼロから作ることが得意。孤立を防ぎ安心できる空間をデザインする。", sdgs: "3, 11, 16", partner: "E-T-M-C（都市インフラ・デザイナー）", step: "近所のコミュニティカフェや地域のイベントスペース、オープンな集いの場に足を運んで雰囲気を味わってみる。" },
+            "P-A-M-S": { title: "P-A-M-S：フェアトレード・アンバサダー", catch: "お買いもので世界を優しく！エシカル消費を日常にする伝道師", seal: "会場ボードの【P-A-M-S】の枠に【赤色シール】を1枚貼ってね！", sealColor: "bg-rose-50 border-rose-200 text-rose-700", desc: "買い物はどんな社会を応援するかへの投票だと捉え、フェアトレード商品などを進んで選び、その魅力を周りに伝える普及派。", sdgs: "1, 8, 12", partner: "E-A-I-S（ゼロウェイスター）", step: "スーパーやカフェで国際フェアトレード認証マークがついたコーヒーやチョコを探して買ってみる。" },
+            "P-A-I-C": { title: "P-A-I-C：インクルーシブ・キャプテン", catch: "一人ひとりの声に耳を澄ます！全員の個性を活かす対話のスペシャリスト", seal: "会場ボードの【P-A-I-C】の枠に【赤色シール】を1枚貼ってね！", sealColor: "bg-rose-50 border-rose-200 text-rose-700", desc: "少人数のチームで声の小さい人の意見も拾い上げ、誰もが発言しやすい雰囲気を作る。相手の価値観を否定せず受容する包容力。", sdgs: "5, 10, 16", partner: "P-T-I-S（エデュテック・ガイド）", step: "会話や話し合いの場面で、あまり喋れていない人に「〇〇さんはどう思う？」と優しくバトンを渡してみる。" },
+            "P-A-I-S": { title: "P-A-I-S：ピース＆人権キーパー", catch: "身近な違和感を見逃さない！優しさと配慮で安心を守る日常の守護者", seal: "会場ボードの【P-A-I-S】の枠に【赤色シール】を1枚貼ってね！", sealColor: "bg-rose-50 border-rose-200 text-rose-700", desc: "日常の会話の中にある無意識の偏見に気づき、身近な人が傷つかないよう配慮できる優しい実践派。日々のちょっとした言動から平和を作る。", sdgs: "5, 10, 16", partner: "E-A-M-S（サステナブル・インフルエンサー）", step: "無意識のラベル貼りや決めつけを自分自身がしていないか振り返ってみる。" }
+        };
+
+        let currentQ = 0;
+        let scores = { E: 0, P: 0, T: 0, A: 0, M: 0, I: 0, C: 0, S: 0 };
+
+        function startQuiz() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQ >= questions.length) {
+                calcResult();
+                return;
+            }
+            const q = questions[currentQ];
+            document.getElementById('question-progress').innerText = `Q${currentQ + 1} / 8`;
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('btn-a').innerText = q.a;
+            document.getElementById('btn-b').innerText = q.b;
+        }
+
+        function answer(choice) {
+            const q = questions[currentQ];
+            if (choice === 'A') {
+                scores[q.axis1]++;
+            } else {
+                scores[q.axis2]++;
+            }
+            currentQ++;
+            showQuestion();
+        }
+
+        function calcResult() {
+            const axis1 = scores.E >= scores.P ? "E" : "P";
+            const axis2 = scores.T >= scores.A ? "T" : "A";
+            const axis3 = scores.M >= scores.I ? "M" : "I";
+            const axis4 = scores.C >= scores.S ? "C" : "S";
+
+            const typeKey = `${axis1}-${axis2}-${axis3}-${axis4}`;
+            const data = typesData[typeKey] || typesData["E-T-M-C"];
+
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            document.getElementById('result-title').innerText = data.title;
+            document.getElementById('result-catch').innerText = data.catch;
+            
+            const sealBox = document.getElementById('result-seal-box');
+            sealBox.className = `p-4 rounded-xl border-2 mb-6 text-center ${data.sealColor}`;
+            document.getElementById('result-seal-text').innerText = data.seal;
+
+            document.getElementById('result-desc').innerText = data.desc;
+            document.getElementById('result-sdgs').innerText = `SDGs目標: ${data.sdgs}`;
+            document.getElementById('result-partner').innerText = data.partner;
+            document.getElementById('result-step').innerText = data.step;
+        }
+    </script>
+</body>
+</html>
