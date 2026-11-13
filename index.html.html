@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDGs 16タイプ性格診断</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-center p-4 font-sans">
+
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200/80" id="app">
+        
+        <!-- スタート画面 -->
+        <div id="start-screen" class="p-7 md:p-8 text-center">
+            <div class="w-24 h-24 mx-auto mb-3 animate-float" id="start-avatar"></div>
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-extrabold tracking-wider mb-2">
+                16 PERSONALITIES × SDGs
+            </span>
+            <h1 class="text-2xl font-extrabold mb-3 text-slate-800 tracking-tight">SDGs 16タイプ診断</h1>
+            <p class="text-sm text-slate-600 mb-6 leading-relaxed">
+                質問に直感で答えるだけで、あなたの<span class="font-bold text-emerald-600">サステナブル・キャラクター</span>と「今日からできる一歩」がわかります！<br><br>
+                診断が終わったら、画面に出る<span class="font-bold underline decoration-emerald-400 decoration-2">指定のカラーシール</span>を会場ボードに貼ってね！
+            </p>
+            <div class="space-y-3">
+                <button onclick="startQuiz(8)" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 px-6 rounded-2xl transition duration-200 shadow-lg shadow-emerald-600/25 active:scale-[0.98] cursor-pointer flex flex-col items-center">
+                    <span class="text-base">⚡ サクッとクイック診断（全8問）</span>
+                    <span class="text-[11px] font-medium text-emerald-100 mt-0.5">所要時間：約1分 ／ まずは手軽にチェック！</span>
+                </button>
+                <button onclick="startQuiz(16)" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-2xl transition duration-200 shadow-lg shadow-blue-600/25 active:scale-[0.98] cursor-pointer flex flex-col items-center">
+                    <span class="text-base">🔍 じっくり精密診断（全16問）</span>
+                    <span class="text-[11px] font-medium text-blue-100 mt-0.5">所要時間：約2分 ／ 4軸の％バランスがより正確に！</span>
+                </button>
+                <button onclick="openCatalog()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-6 rounded-2xl transition duration-200 text-xs flex items-center justify-center gap-1.5 cursor-pointer mt-1">
+                    <span>📖 全16タイプ図鑑を見る</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 質問画面 -->
+        <div id="quiz-screen" class="hidden p-6 md:p-8">
+            <div class="mb-5">
+                <div class="flex justify-between text-xs font-bold text-slate-400 mb-2">
+                    <span id="question-progress">Q1 / 8</span>
+                    <span id="progress-percent">12%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 12.5%"></div>
+                </div>
+            </div>
+            <h2 id="question-text" class="text-lg font-extrabold mb-6 text-slate-800 min-h-[3.5rem] leading-snug"></h2>
+            <div class="space-y-3.5">
+                <button onclick="answer('A')" id="btn-a" class="w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/60 active:scale-[0.99] transition duration-150 font-semibold text-sm text-slate-700 leading-relaxed shadow-sm cursor-pointer"></button>
+                <button onclick="answer('B')" id="btn-b" class="w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/60 active:scale-[0.99] transition duration-150 font-semibold text-sm text-slate-700 leading-relaxed shadow-sm cursor-pointer"></button>
+            </div>
+        </div>
+
+        <!-- 結果画面（フルスペック・MBTI風キャラクターカード仕様） -->
+        <div id="result-screen" class="hidden animate-fade-in-up">
+            <!-- カード上部：キャラクター＆テーマカラーヘッダー -->
+            <div id="result-header" class="p-6 pb-9 text-white text-center relative overflow-hidden">
+                <div class="absolute -top-10 -left-10 w-36 h-36 rounded-full bg-white/10"></div>
+                <div class="absolute top-12 -right-8 w-28 h-28 rotate-45 bg-white/10 rounded-2xl"></div>
+                
+                <div class="relative z-10">
+                    <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-black/20 backdrop-blur-sm text-xs font-extrabold tracking-widest uppercase mb-2" id="result-code">
+                        E-T-M-C
+                    </div>
+                    
+                    <!-- メインキャラクター表示エリア -->
+                    <div class="w-32 h-32 mx-auto my-1 animate-float drop-shadow-xl" id="result-avatar"></div>
+                    
+                    <h1 id="result-title" class="text-xl font-black tracking-tight leading-snug mt-1"></h1>
+                    <p id="result-catch" class="text-xs text-white/95 mt-1.5 font-medium leading-relaxed px-2"></p>
+                </div>
+            </div>
+
+            <!-- カード本体 -->
+            <div class="p-5 md:p-6 -mt-5 bg-white rounded-t-3xl relative z-20 space-y-5">
+                
+                <!-- チケット風：会場シール案内 -->
+                <div id="result-seal-box" class="p-4 rounded-2xl border-2 border-dashed text-center relative shadow-sm">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider opacity-80 block mb-1">📍 会場ボード体験ミッション</span>
+                    <p id="result-seal-text" class="text-sm font-black leading-snug"></p>
+                </div>
+
+                <!-- 特徴・強み -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span class="text-xs font-extrabold text-slate-400 uppercase tracking-wider block mb-1.5">🌱 あなたの特徴・強み</span>
+                    <p id="result-desc" class="text-sm text-slate-700 leading-relaxed font-medium"></p>
+                </div>
+
+                <!-- 4軸バランスメーター（％バー） -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">📊 あなたの4軸バランス</span>
+                        <span id="result-mode-badge" class="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full"></span>
+                    </div>
+                    <div id="axis-meters" class="space-y-3"></div>
+                </div>
+
+                <!-- 関連SDGs（タップ可能バッジ） -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">🎯 関連するSDGs目標</span>
+                        <span class="text-[11px] text-emerald-600 font-bold">タップで詳細を見る 👆</span>
+                    </div>
+                    <div id="result-sdgs-badges" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- 相棒（タップで詳細ポップアップ表示）＆ ライトな一歩 -->
+                <div class="space-y-3">
+                    <button id="partner-card-btn" class="w-full text-left bg-amber-50/80 hover:bg-amber-100/70 active:scale-[0.99] transition p-3.5 rounded-2xl border border-amber-200/80 flex items-center gap-3.5 shadow-xs cursor-pointer">
+                        <div id="partner-avatar" class="w-15 h-15 shrink-0 drop-shadow-sm"></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-extrabold text-amber-700">🤝 相性バツグンの相棒</span>
+                                <span class="text-[10px] font-bold text-amber-600 bg-amber-200/60 px-2 py-0.5 rounded-full">詳細を見る 👆</span>
+                            </div>
+                            <p id="result-partner-code" class="text-[11px] font-extrabold text-amber-600/90 tracking-wider mt-0.5"></p>
+                            <p id="result-partner-name" class="text-sm font-black text-slate-800 leading-tight truncate"></p>
+                            <p class="text-[11px] text-slate-500 mt-0.5">会場でこの色のシールの人を探そう！</p>
+                        </div>
+                    </button>
+
+                    <div class="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-100 flex items-start gap-3">
+                        <span class="text-xl mt-0.5">💡</span>
+                        <div>
+                            <span class="text-[11px] font-extrabold text-emerald-700 block">今日からできるライトな一歩</span>
+                            <p id="result-step" class="text-xs font-medium text-slate-700 mt-0.5 leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- アクションボタン群 -->
+                <div class="pt-2 space-y-2.5">
+                    <button onclick="openShareCard()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3.5 px-6 rounded-2xl transition duration-200 text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer">
+                        <span>📸 スクショ用シェアカードを表示</span>
+                    </button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="shareResult()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-3 rounded-2xl transition duration-200 text-xs flex items-center justify-center gap-1 shadow-sm cursor-pointer">
+                            <span>結果をコピー 📋</span>
+                        </button>
+                        <button onclick="openCatalog()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-3 px-3 rounded-2xl transition duration-200 text-xs flex items-center justify-center gap-1 cursor-pointer">
+                            <span>全16タイプ図鑑 📖</span>
+                        </button>
+                    </div>
+                    <button onclick="location.reload()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 px-6 rounded-2xl transition duration-200 text-xs cursor-pointer">
+                        最初からやり直す 🔄
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル1：SDGs詳細ポップアップ -->
+    <div id="sdgs-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" onclick="closeModal('sdgs-modal')">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl animate-fade-in-up" onclick="event.stopPropagation()">
+            <div class="flex items-center gap-3 mb-3">
+                <span id="modal-badge" class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-sm shrink-0"></span>
+                <div>
+                    <span class="text-[11px] font-bold text-slate-400 block">SDGs 目標詳細</span>
+                    <h3 id="modal-title" class="text-base font-extrabold text-slate-800 leading-tight"></h3>
+                </div>
+            </div>
+            <p id="modal-desc" class="text-sm text-slate-600 leading-relaxed mb-5 bg-slate-50 p-3.5 rounded-xl"></p>
+            <div class="flex gap-2">
+                <a id="modal-link" href="#" target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-center font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                    詳しく知る（公式サイト）↗
+                </a>
+                <button onclick="closeModal('sdgs-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル2：キャラクター詳細ポップアップ（相棒タップ＆図鑑タップ共通） -->
+    <div id="type-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" onclick="closeModal('type-modal')">
+        <div class="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl animate-fade-in-up" onclick="event.stopPropagation()">
+            <div id="type-modal-header" class="p-5 text-white text-center relative">
+                <span id="type-modal-tag" class="inline-block px-3 py-0.5 rounded-full bg-black/20 text-[10px] font-extrabold tracking-widest mb-1"></span>
+                <div id="type-modal-avatar" class="w-24 h-24 mx-auto my-1 drop-shadow-md"></div>
+                <h3 id="type-modal-title" class="text-lg font-black leading-snug"></h3>
+                <p id="type-modal-catch" class="text-[11px] text-white/90 mt-1"></p>
+            </div>
+            <div class="p-5 space-y-3.5">
+                <div id="type-modal-seal" class="p-2.5 rounded-xl border border-dashed text-center text-xs font-extrabold"></div>
+                <p id="type-modal-desc" class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl"></p>
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 block mb-1">関連SDGs目標</span>
+                    <div id="type-modal-sdgs" class="flex flex-wrap gap-1.5"></div>
+                </div>
+                <button onclick="closeModal('type-modal')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル3：全16タイプ図鑑ギャラリー -->
+    <div id="catalog-modal" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4" onclick="closeModal('catalog-modal')">
+        <div class="bg-white rounded-3xl max-w-md w-full max-h-[88vh] flex flex-col overflow-hidden shadow-2xl animate-fade-in-up" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div>
+                    <h3 class="text-base font-black text-slate-800">📖 SDGs 全16タイプ図鑑</h3>
+                    <p class="text-[11px] text-slate-500">気になるキャラをタップで詳細表示</p>
+                </div>
+                <button onclick="closeModal('catalog-modal')" class="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-sm flex items-center justify-center cursor-pointer">✕</button>
+            </div>
+            <div id="catalog-grid" class="p-4 overflow-y-auto grid grid-cols-2 gap-2.5 bg-slate-50/50"></div>
+        </div>
+    </div>
+
+    <!-- モーダル4：スクショ用シェアカード（1画面完結レイアウト） -->
+    <div id="share-card-modal" class="hidden fixed inset-0 bg-slate-900/85 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4" onclick="closeModal('share-card-modal')">
+        <p class="text-white/90 text-xs font-bold mb-2.5 animate-pulse">📱 この画面をスクショしてSNSにシェアしよう！</p>
+        <div id="share-card-body" class="max-w-xs w-full rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-white animate-fade-in-up" onclick="event.stopPropagation()">
+            <div id="sc-header" class="p-5 pb-6 text-white text-center relative">
+                <span class="text-[10px] font-extrabold tracking-widest uppercase bg-black/20 px-2.5 py-0.5 rounded-full">SDGs 16タイプ診断</span>
+                <div id="sc-avatar" class="w-24 h-24 mx-auto my-1.5 drop-shadow-lg"></div>
+                <div id="sc-code" class="text-xs font-black tracking-widest opacity-90"></div>
+                <h2 id="sc-title" class="text-lg font-black leading-tight mt-0.5"></h2>
+            </div>
+            <div class="p-4 -mt-3 bg-white rounded-t-2xl space-y-3">
+                <div id="sc-seal" class="py-2 px-3 rounded-xl border border-dashed text-center text-xs font-black"></div>
+                <div id="sc-bars" class="space-y-1.5 text-[10px]"></div>
+                <div class="flex items-center gap-2.5 bg-amber-50 p-2.5 rounded-xl border border-amber-200/80">
+                    <div id="sc-partner-avatar" class="w-10 h-10 shrink-0"></div>
+                    <div class="min-w-0">
+                        <span class="text-[9px] font-extrabold text-amber-700 block">🤝 相性バツグンの相棒</span>
+                        <p id="sc-partner-name" class="text-xs font-black text-slate-800 truncate"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button onclick="closeModal('share-card-modal')" class="mt-4 bg-white/20 hover:bg-white/30 text-white font-bold py-2 px-6 rounded-full text-xs backdrop-blur-xs transition cursor-pointer">
+            元の画面に戻る ✕
+        </button>
+    </div>
+
+    <script>
+        // 16Personalities風のフラットSVGキャラクター生成関数
+        function generateCharacterSVG(typeKey) {
+            const [a1, a2, a3, a4] = typeKey.split('-');
+            
+            const palette = {
+                "E-T": { main: "#2563EB", sub: "#93C5FD", accent: "#38BDF8", bg: "#EFF6FF" }, // 青
+                "E-A": { main: "#059669", sub: "#6EE7B7", accent: "#34D399", bg: "#ECFDF5" }, // 緑
+                "P-T": { main: "#D97706", sub: "#FCD34D", accent: "#FBBF24", bg: "#FFFBEB" }, // 黄
+                "P-A": { main: "#E11D48", sub: "#FDA4AF", accent: "#FB7185", bg: "#FFF1F2" }  // 赤
+            };
+            const p = palette[`${a1}-${a2}`] || palette["E-T"];
+
+            let hairBack = "";
+            let hairFront = "";
+            if (a3 === "M" && a4 === "C") {
+                hairFront = `<path d="M36 44 Q50 26 64 44 Q62 34 50 32 Q38 34 36 44 Z" fill="#1E293B"/>
+                             <path d="M50 32 L54 22 L48 28" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" fill="none"/>`;
+            } else if (a3 === "M" && a4 === "S") {
+                hairBack = `<rect x="33" y="38" width="34" height="26" rx="12" fill="#334155"/>`;
+                hairFront = `<path d="M35 44 C35 30, 65 30, 65 44 C60 38, 40 38, 35 44 Z" fill="#334155"/>
+                             <rect x="35" y="37" width="30" height="4" rx="2" fill="${p.accent}"/>`;
+            } else if (a3 === "I" && a4 === "C") {
+                hairFront = `<path d="M35 46 C34 29, 66 29, 65 46 C62 36, 48 40, 35 46 Z" fill="#0F172A"/>`;
+            } else {
+                hairBack = `<circle cx="36" cy="48" r="8" fill="#475569"/><circle cx="64" cy="48" r="8" fill="#475569"/>`;
+                hairFront = `<path d="M34 45 C34 28, 66 28, 66 45 C58 37, 42 37, 34 45 Z" fill="#475569"/>`;
+            }
+
+            const glasses = a2 === "T" ? `
+                <rect x="39" y="45" width="9" height="6" rx="1.5" fill="white" fill-opacity="0.35" stroke="#1E293B" stroke-width="1.6"/>
+                <rect x="52" y="45" width="9" height="6" rx="1.5" fill="white" fill-opacity="0.35" stroke="#1E293B" stroke-width="1.6"/>
+                <line x1="48" y1="48" x2="52" y2="48" stroke="#1E293B" stroke-width="1.6"/>
+            ` : "";
+
+            let propItem = "";
+            if (a1 === "E" && a2 === "T") {
+                propItem = `<rect x="64" y="58" width="18" height="23" rx="3" fill="#1E293B" stroke="white" stroke-width="1.5"/>
+                            <path d="M68 74 L72 68 L75 71 L79 64" stroke="#38BDF8" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+            } else if (a1 === "E" && a2 === "A") {
+                propItem = `<circle cx="74" cy="70" r="10" fill="#10B981" stroke="white" stroke-width="1.5"/>
+                            <path d="M74 75 L74 66 M74 69 Q79 64 81 68 Q77 71 74 69 M74 71 Q69 66 67 70 Q71 73 74 71" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/>`;
+            } else if (a1 === "P" && a2 === "T") {
+                propItem = `<polygon points="74,58 84,64 84,75 74,81 64,75 64,64" fill="#F59E0B" stroke="white" stroke-width="1.5"/>
+                            <circle cx="74" cy="69" r="3" fill="white"/>
+                            <line x1="74" y1="69" x2="74" y2="58" stroke="white" stroke-width="1.5"/>
+                            <line x1="74" y1="69" x2="84" y2="75" stroke="white" stroke-width="1.5"/>
+                            <line x1="74" y1="69" x2="64" y2="75" stroke="white" stroke-width="1.5"/>`;
+            } else {
+                propItem = `<circle cx="74" cy="70" r="10" fill="#F43F5E" stroke="white" stroke-width="1.5"/>
+                            <path d="M74 75 C74 75 68 71 68 67.5 C68 65.5 70 64.5 71.5 64.5 C72.8 64.5 73.6 65.3 74 66 C74.4 65.3 75.2 64.5 76.5 64.5 C78 64.5 80 65.5 80 67.5 C80 71 74 75 74 75 Z" fill="white"/>`;
+            }
+
+            const outfitDetail = a4 === "C" 
+                ? `<polygon points="50,64 43,75 57,75" fill="white" fill-opacity="0.9"/><circle cx="50" cy="79" r="2" fill="white"/>`
+                : `<path d="M40 65 Q50 74 60 65" stroke="white" stroke-width="2.5" fill="none"/><circle cx="50" cy="76" r="3.5" fill="${p.accent}"/>`;
+
+            return `
+            <svg viewBox="0 0 100 100" class="w-full h-full">
+                <circle cx="50" cy="50" r="46" fill="${p.bg}" stroke="white" stroke-width="3"/>
+                <polygon points="50,8 88,30 88,70 50,92 12,70 12,30" fill="${p.sub}" fill-opacity="0.35"/>
+                ${hairBack}
+                <path d="M27 88 C27 69, 36 63, 50 63 C64 63, 73 69, 73 88 Z" fill="${p.main}"/>
+                ${outfitDetail}
+                <rect x="45" y="56" width="10" height="9" rx="3" fill="#FDE68A"/>
+                <circle cx="50" cy="46" r="14" fill="#FEF3C7"/>
+                <circle cx="44" cy="48" r="1.7" fill="#1E293B"/>
+                <circle cx="56" cy="48" r="1.7" fill="#1E293B"/>
+                <path d="M46 53 Q50 56.5 54 53" stroke="#1E293B" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                ${hairFront}
+                ${glasses}
+                ${propItem}
+            </svg>`;
+        }
+
+        // SDGs 17目標マスターデータ
+        const sdgsMaster = {
+            1: { title: "貧困をなくそう", color: "#E5243B", desc: "あらゆる場所のあらゆる形態の貧困を終わらせることを目指します。" },
+            2: { title: "飢餓をゼロに", color: "#DDA63A", desc: "飢餓を終わらせ、食料安全保障及び栄養改善を実現し、持続可能な農業を促進します。" },
+            3: { title: "すべての人に健康と福祉を", color: "#4C9F38", desc: "あらゆる年齢のすべての人々の健康的な生活を確保し、福祉を促進します。" },
+            4: { title: "質の高い教育をみんなに", color: "#C5192D", desc: "すべての人に包摂的かつ公正な質の高い教育を確保し、生涯学習の機会を促進します。" },
+            5: { title: "ジェンダー平等を実現しよう", color: "#FF3A21", desc: "ジェンダー平等を達成し、すべての女性及び女児の能力強化を行います。" },
+            6: { title: "安全な水とトイレを世界中に", color: "#26BDE2", desc: "すべての人々の水と衛生の利用可能性と持続可能な管理を確保します。" },
+            7: { title: "エネルギーをみんなに そしてクリーンに", color: "#FCC30B", desc: "すべての人々の、安価かつ信頼できる持続可能な近代的エネルギーへのアクセスを確保します。" },
+            8: { title: "働きがいも経済成長も", color: "#A21942", desc: "包摂的かつ持続可能な経済成長及びすべての人々の完全かつ生産的な雇用と働きがいのある人間らしい雇用を促進します。" },
+            9: { title: "産業と技術革新の基盤をつくろう", color: "#FD6925", desc: "強靱なインフラ構築、包摂的かつ持続可能な産業化の促進及びイノベーションの推進を図ります。" },
+            10: { title: "人や国の不平等をなくそう", color: "#DD1367", desc: "各国内及び各国間の不平等を是正します。" },
+            11: { title: "住み続けられるまちづくりを", color: "#FD9D24", desc: "包摂的で安全かつ強靱で持続可能な都市及び人間居住を実現します。" },
+            12: { title: "つくる責任 つかう責任", color: "#BF8B2E", desc: "持続可能な生産消費形態を確保します。" },
+            13: { title: "気候変動に具体的な対策を", color: "#3F7E44", desc: "気候変動及びその影響を軽減するための緊急対策を講じます。" },
+            14: { title: "海の豊かさを守ろう", color: "#0A97D9", desc: "持続可能な開発のために海洋・海洋資源を保全し、持続可能な形で利用します。" },
+            15: { title: "陸の豊かさも守ろう", color: "#56C02B", desc: "陸域生態系の保護、回復、持続可能な利用の推進、森林の持続可能な管理などを行います。" },
+            16: { title: "平和と公正をすべての人に", color: "#00689D", desc: "持続可能な開発のための平和で包摂的な社会を促進し、すべての人々に司法へのアクセスを提供します。" },
+            17: { title: "パートナーシップで目標を達成しよう", color: "#19486A", desc: "持続可能な開発のための実施手段を強化し、グローバル・パートナーシップを活性化します。" }
+        };
+
+        // 全16問の質問マスターデータ（Q1〜Q8がクイック版、Q1〜Q16がじっくり精密版）
+        const allQuestions = [
+            // --- 前半8問（クイック診断用：各軸2問） ---
+            { q: "ニュースやSNSで、思わず目や心が留まるのはどっち？", a: "気候変動やゴミ問題などの「環境・自然問題」", b: "生きづらさや不平等などの「人・社会問題」", axis1: "E", axis2: "P" },
+            { q: "「世界が良くなった」と感じる瞬間はどっち？", a: "地球環境が守られ、エネルギーの無駄がなくなったとき", b: "誰もが差別なく、自分らしく安心して暮らせているとき", axis1: "E", axis2: "P" },
+            { q: "大きな課題を解決するとき、期待したいのはどっち？", a: "新しいアプリやAI、画期的な「仕組み」の導入", b: "一人ひとりの意識改革や日々の「対話・習慣」", axis1: "T", axis2: "A" },
+            { q: "自分の得意なアプローチに近いのはどっち？", a: "ツールやシステム、データを活用して効率よく進めること", b: "手足を動かしたり、人とコミュニケーションをとって進めること", axis1: "T", axis2: "A" },
+            { q: "物を考えるとき、自然と意識が向くのはどっち？", a: "街全体、大学全体など「大きな全体の構造」", b: "自分自身や目の前の友人など「身近な現場・足元」", axis1: "M", axis2: "I" },
+            { q: "理想的な変化のスタート地点はどこだと思う？", a: "ルールや制度、システムなど「社会の仕組み」を変えること", b: "一人ひとりの生活や行動など「個人の日常」から変えていくこと", axis1: "M", axis2: "I" },
+            { q: "グループワーク等で、テンションが上がるのはどっち？", a: "データを分析したり、ゼロから新しい企画を「立ち上げること」", b: "良いアイデアを周りに「広めたり」、現場で「継続実行すること」", axis1: "C", axis2: "S" },
+            { q: "自分の強みだと思うのはどっち？", a: "分析力・発想力（「なぜ？」「どう作るか？」を深く考える力）", b: "共感力・実行力（「いいね！」と周りに伝えたり実践する力）", axis1: "C", axis2: "S" },
+
+            // --- 後半8問（じっくり精密診断用の追加8問：各軸さらに2問） ---
+            { q: "大学祭の企画を1つプロデュースするなら、どっちをやってみたい？", a: "ゴミゼロや再生可能エネルギーを使った「エコフェス企画」", b: "留学生や地域の子ども、障がいのある人も一緒に楽しめる「バリアフリー企画」", axis1: "E", axis2: "P" },
+            { q: "「もっと予算や支援を増やすべきだ！」と強く思うのはどっち？", a: "絶滅危惧種の保護や森林再生、プラスチック削減などの環境対策", b: "子どもの貧困対策やジェンダー平等、教育格差の解消などの福祉・人権対策", axis1: "E", axis2: "P" },
+            { q: "友達から「最近ちょっと疲れ気味で…」と相談されたとき、とっさに浮かぶのは？", a: "「睡眠管理アプリとか、効率よく休めるルーティン試してみたら？」", b: "「大丈夫？よかったら今日ゆっくりご飯でも行きながら話そうよ」", axis1: "T", axis2: "A" },
+            { q: "社会課題を解決する上で、最終的に一番強い武器になると思うのは？", a: "AIや最新テクノロジーのイノベーション（技術革新）", b: "一人ひとりの小さな優しさや意識の積み重ね（人の行動変容）", axis1: "T", axis2: "A" },
+            { q: "バイト先やサークルで「ちょっとやりづらいな」と思うルールがあったとき、どうする？", a: "「全体のルールやシフトの仕組み自体を変えよう」と提案する", b: "「まずは自分や周りのメンバーがやりやすいように工夫しよう」と動く", axis1: "M", axis2: "I" },
+            { q: "自分が「やりがい」を一番強く感じるのはどっちの瞬間？", a: "自分のアイデアや仕組みが、多くの人や組織全体にインパクトを与えたとき", b: "目の前の誰か1人が「ありがとう、助かったよ！」と直接笑顔になってくれたとき", axis1: "M", axis2: "I" },
+            { q: "旅行や遊びの計画を立てるとき、自分の役割になりやすいのはどっち？", a: "行きたいスポットやルートを調べて、ゼロからプランを組み立てる役", b: "みんなのテンションを盛り上げたり、当日の連絡・進行をスムーズに回す役", axis1: "C", axis2: "S" },
+            { q: "SNSで素敵な取り組みや商品を見つけたとき、どんな行動をとりやすい？", a: "「なぜこれが流行っているんだろう？どんな仕組みだろう？」と裏側を分析する", b: "「これめっちゃ良いよ！」と友達にシェアしたり、すぐに自分で買ってみる", axis1: "C", axis2: "S" }
+        ];
+
+        // テーマカラー定義
+        const themes = {
+            blue: { header: "bg-gradient-to-br from-blue-500 to-indigo-600", seal: "bg-blue-50 border-blue-300 text-blue-800" },
+            green: { header: "bg-gradient-to-br from-emerald-500 to-teal-600", seal: "bg-emerald-50 border-emerald-300 text-emerald-800" },
+            yellow: { header: "bg-gradient-to-br from-amber-400 to-orange-500", seal: "bg-amber-50 border-amber-300 text-amber-900" },
+            red: { header: "bg-gradient-to-br from-rose-500 to-pink-600", seal: "bg-rose-50 border-rose-300 text-rose-800" }
+        };
+
+        // 16タイプの詳細データ
+        const typesData = {
+            "E-T-M-C": { theme: "blue", title: "都市インフラ・デザイナー", catch: "街や社会の仕組みをアップデート！未来のスマートシティを描く構造派", seal: "ボードの【E-T-M-C】に【青色シール】を貼ろう！", desc: "個人の努力だけに頼らず、交通システムや街全体のエネルギー循環など「マクロな仕組み」から解決を目指す広い視野の持ち主。", sdgs: [7, 9, 11, 13], partnerCode: "P-A-M-C", step: "いつも通る駅や街のゴミ箱の配置を見て、「どうすればみんなが自然とエコに動けるか」の仕組みを想像してみる。" },
+            "E-T-M-S": { theme: "blue", title: "資源循環ロジスティシャン", catch: "捨てるをゼロに！まわし続ける社会のルートを作る循環のプロ", seal: "ボードの【E-T-M-S】に【青色シール】を貼ろう！", desc: "「使って捨てる」から「まわし続ける」への転換を目指す実行派。リサイクル回収網やシェアリングサービスを広めるのが得意。", sdgs: [9, 12, 13, 14], partnerCode: "E-A-I-C", step: "ペットボトルや紙パックを捨てるときに、どんな製品に生まれ変わるか（リサイクルルート）を意識してしっかり分別する。" },
+            "E-T-I-C": { theme: "blue", title: "スマート省エネアナリスト", catch: "データで無駄をあぶり出す！論理と効率で攻めるデジタル・エコ探偵", seal: "ボードの【E-T-I-C】に【青色シール】を貼ろう！", desc: "「なんとなくエコ」ではなく、数値やデータに基づいた確実な効果を追求するタイプ。電気代や通信量の無駄をロジカルに分析。", sdgs: [7, 9, 12, 13], partnerCode: "E-A-M-S", step: "スマホ内の不要なアプリや溜まったメール・重複写真を整理して通信電力を削減！" },
+            "E-T-I-S": { theme: "blue", title: "次世代エコテック・ユーザー", catch: "最新技術でスマートに勝つ！テクノロジーを使いこなす環境実践派", seal: "ボードの【E-T-I-S】に【青色シール】を貼ろう！", desc: "「我慢する節約」ではなく技術の進化による解決にワクワクするタイプ。省エネ家電やEVなどの最新エコ技術を日常に賢く取り入れる。", sdgs: [7, 9, 11, 13], partnerCode: "P-T-I-C", step: "家電の「省エネモード」をオンに設定したり、最新の省エネ家電やEVに関するニュースをチェックしてみる。" },
+
+            "E-A-M-C": { theme: "green", title: "グリーン企画ファシリテーター", catch: "みんなの想いをカタチに！環境アクションの場を立ち上げる仕掛け人", seal: "ボードの【E-A-M-C】に【緑色シール】を貼ろう！", desc: "地域の清掃活動やエコイベントなどをゼロから企画し、周りを巻き込んで盛り上げるのが得意。人の輪を広げるリーダーシップがある。", sdgs: [11, 13, 15, 17], partnerCode: "P-T-M-S", step: "地域のクリーン作戦やワークショップ、環境イベントの情報をSNSや街の掲示板で探してみる。" },
+            "E-A-M-S": { theme: "green", title: "サステナブル・インフルエンサー", catch: "オシャレに楽しく地球を守る！エコな暮らしのムーヴメントメーカー", seal: "ボードの【E-A-M-S】に【緑色シール】を貼ろう！", desc: "堅苦しい環境話をセンス良く人に伝える発信力の持ち主。日常のエコな工夫を共有し、周りの意識を自然と変えていく。", sdgs: [12, 13, 14, 17], partnerCode: "E-T-I-C", step: "気に入っているエコグッズや、今日から試せるサステナブルなアイデアを1つSNSや友達にシェアしてみる。" },
+            "E-A-I-C": { theme: "green", title: "フードロス・アイデアシェフ", catch: "「もったいない」を「おいしい」へ！食から地球を救う工夫の天才", seal: "ボードの【E-A-I-C】に【緑色シール】を貼ろう！", desc: "身近な「食」の廃棄問題に着目し、食材を無駄なく使い切るレシピや買い物の工夫をあみ出すタイプ。柔軟な発想力を持つ。", sdgs: [2, 12, 13, 15], partnerCode: "E-T-M-S", step: "買い物時に手前にある賞味期限の近い商品から選ぶ「手前取り」を実践したり、冷蔵庫の余り食材で一品作ってみる。" },
+            "E-A-I-S": { theme: "green", title: "ゼロウェイスター", catch: "マイバッグ＆マイボトルは当たり前！ごみを極力作らない日常の達人", seal: "ボードの【E-A-I-S】に【緑色シール】を貼ろう！", desc: "日々の暮らしの中で「ごみを出さない選択」をコツコツ徹底できる実践派。足元から地球に優しい暮らしを体現する。", sdgs: [12, 13, 14, 15], partnerCode: "P-A-M-S", step: "コンビニやお店でレジ袋やストローを辞退し、マイバッグやマイボトルを活用する。" },
+
+            "P-T-M-C": { theme: "yellow", title: "ダイバーシティ・アナリスト", catch: "データの力で「見えない格差」を可視化！社会の不平等に挑むロジカル派", seal: "ボードの【P-T-M-C】に【黄色シール】を貼ろう！", desc: "ジェンダーギャップや地域格差などの複雑な問題を、データや統計を用いて客観的に分析するタイプ。論理で問題の根底をあぶり出す。", sdgs: [5, 8, 10], partnerCode: "P-A-M-S", step: "性別や年齢ごとの意識調査データや、多様性に関する統計ニュースをひとつ意識して読んでみる。" },
+            "P-T-M-S": { theme: "yellow", title: "ソーシャル・プラットフォーマー", catch: "支援と想いをつなぐ架け橋！ネットと仕組みで社会を救うコレクター", seal: "ボードの【P-T-M-S】に【黄色シール】を貼ろう！", desc: "クラウドファンディングやマッチングアプリなど、「困っている人と支援したい人をつなぐ仕組み」を活用・普及させるのが得意。", sdgs: [1, 10, 17], partnerCode: "E-A-M-C", step: "クラウドファンディングサイトやボランティア募集サイトを覗いて、どんな仕組みがあるかチェックしてみる。" },
+            "P-T-I-C": { theme: "yellow", title: "アクセシビリティ・エンジニア", catch: "テクノロジーで「壁」を壊す！誰でも使えるバリアフリーの創作者", seal: "ボードの【P-T-I-C】に【黄色シール】を貼ろう！", desc: "障がいの有無や年齢に関わらず、すべての人がデジタル技術やサービスを快適に使える工夫（字幕、音声読み上げ等）を考え出す発想力。", sdgs: [4, 9, 10], partnerCode: "E-T-I-S", step: "スマホやPCのアクセシビリティ機能（文字拡大、コントラスト調整、音声読み上げなど）を実際に触って試してみる。" },
+            "P-T-I-S": { theme: "yellow", title: "エデュテック・ガイド", catch: "デジタルの力で学ぶ機会を均等に！情報格差をなくす学びのサポーター", seal: "ボードの【P-T-I-S】に【黄色シール】を貼ろう！", desc: "オンライン学習や翻訳ツールなどを活用し、誰もが平等に学びや情報にアクセスできる環境を身近なところで支えるタイプ。", sdgs: [4, 10], partnerCode: "P-A-I-C", step: "無料で学べるオンライン講座や翻訳アプリの便利な機能を、家族や身近な人に共有してみる。" },
+
+            "P-A-M-C": { theme: "red", title: "コミュニティ・デザイナー", catch: "誰もが「自分の居場所」を感じられる！あたたかい場の仕掛け人", seal: "ボードの【P-A-M-C】に【赤色シール】を貼ろう！", desc: "地域の交流イベントや、多様な人が集まれるサードプレイスをゼロから作ることが得意。孤立を防ぎ安心できる空間をデザインする。", sdgs: [3, 11, 16], partnerCode: "E-T-M-C", step: "近所のコミュニティカフェや地域のイベントスペース、オープンな集いの場に足を運んで雰囲気を味わってみる。" },
+            "P-A-M-S": { theme: "red", title: "フェアトレード・アンバサダー", catch: "お買いもので世界を優しく！エシカル消費を日常にする伝道師", seal: "ボードの【P-A-M-S】に【赤色シール】を貼ろう！", desc: "買い物はどんな社会を応援するかへの投票だと捉え、フェアトレード商品などを進んで選び、その魅力を周りに伝える普及派。", sdgs: [1, 8, 12], partnerCode: "E-A-I-S", step: "スーパーやカフェで国際フェアトレード認証マークがついたコーヒーやチョコを探して買ってみる。" },
+            "P-A-I-C": { theme: "red", title: "インクルーシブ・キャプテン", catch: "一人ひとりの声に耳を澄ます！全員の個性を活かす対話のスペシャリスト", seal: "ボードの【P-A-I-C】に【赤色シール】を貼ろう！", desc: "少人数のチームで声の小さい人の意見も拾い上げ、誰もが発言しやすい雰囲気を作る。相手の価値観を否定せず受容する包容力。", sdgs: [5, 10, 16], partnerCode: "P-T-I-S", step: "会話や話し合いの場面で、あまり喋れていない人に「〇〇さんはどう思う？」と優しくバトンを渡してみる。" },
+            "P-A-I-S": { theme: "red", title: "ピース＆人権キーパー", catch: "身近な違和感を見逃さない！優しさと配慮で安心を守る日常の守護者", seal: "ボードの【P-A-I-S】に【赤色シール】を貼ろう！", desc: "日常の会話の中にある無意識の偏見に気づき、身近な人が傷つかないよう配慮できる優しい実践派。日々のちょっとした言動から平和を作る。", sdgs: [5, 10, 16], partnerCode: "E-A-M-S", step: "無意識のラベル貼りや決めつけを自分自身がしていないか振り返ってみる。" }
+        };
+
+        document.getElementById('start-avatar').innerHTML = generateCharacterSVG("E-A-M-C");
+
+        let activeQuestions = [];
+        let currentQ = 0;
+        let scores = { E: 0, P: 0, T: 0, A: 0, M: 0, I: 0, C: 0, S: 0 };
+        let currentResultText = "";
+        let lastResultData = null;
+
+        function startQuiz(totalCount) {
+            activeQuestions = allQuestions.slice(0, totalCount);
+            currentQ = 0;
+            scores = { E: 0, P: 0, T: 0, A: 0, M: 0, I: 0, C: 0, S: 0 };
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQ >= activeQuestions.length) {
+                calcResult();
+                return;
+            }
+            const q = activeQuestions[currentQ];
+            const progress = ((currentQ + 1) / activeQuestions.length) * 100;
+            document.getElementById('question-progress').innerText = `Q${currentQ + 1} / ${activeQuestions.length}`;
+            document.getElementById('progress-percent').innerText = `${Math.round(progress)}%`;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('btn-a').innerText = q.a;
+            document.getElementById('btn-b').innerText = q.b;
+        }
+
+        function answer(choice) {
+            const q = activeQuestions[currentQ];
+            if (choice === 'A') scores[q.axis1]++;
+            else scores[q.axis2]++;
+            currentQ++;
+            showQuestion();
+        }
+
+        function calcResult() {
+            const axis1 = scores.E >= scores.P ? "E" : "P";
+            const axis2 = scores.T >= scores.A ? "T" : "A";
+            const axis3 = scores.M >= scores.I ? "M" : "I";
+            const axis4 = scores.C >= scores.S ? "C" : "S";
+
+            const typeKey = `${axis1}-${axis2}-${axis3}-${axis4}`;
+            const data = typesData[typeKey] || typesData["E-T-M-C"];
+            const themeStyle = themes[data.theme];
+            const partnerData = typesData[data.partnerCode];
+
+            // 1軸あたりの質問数（8問なら2問、16問なら4問）
+            const perAxisCount = activeQuestions.length / 4;
+            const pct = {
+                E: Math.round((scores.E / perAxisCount) * 100),
+                P: Math.round((scores.P / perAxisCount) * 100),
+                T: Math.round((scores.T / perAxisCount) * 100),
+                A: Math.round((scores.A / perAxisCount) * 100),
+                M: Math.round((scores.M / perAxisCount) * 100),
+                I: Math.round((scores.I / perAxisCount) * 100),
+                C: Math.round((scores.C / perAxisCount) * 100),
+                S: Math.round((scores.S / perAxisCount) * 100)
+            };
+
+            lastResultData = { typeKey, data, themeStyle, partnerData, pct };
+
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            document.getElementById('result-header').className = `p-6 pb-9 text-white text-center relative overflow-hidden ${themeStyle.header}`;
+            document.getElementById('result-code').innerText = typeKey;
+            document.getElementById('result-avatar').innerHTML = generateCharacterSVG(typeKey);
+            document.getElementById('result-title').innerText = data.title;
+            document.getElementById('result-catch').innerText = data.catch;
+
+            document.getElementById('result-seal-box').className = `p-4 rounded-2xl border-2 border-dashed text-center relative shadow-sm ${themeStyle.seal}`;
+            document.getElementById('result-seal-text').innerText = data.seal;
+
+            document.getElementById('result-desc').innerText = data.desc;
+            document.getElementById('result-step').innerText = data.step;
+            document.getElementById('result-mode-badge').innerText = activeQuestions.length === 16 ? "精密16問モード" : "クイック8問モード";
+
+            const axesConfig = [
+                { left: "環境・自然 (E)", right: "人間・社会 (P)", lVal: pct.E, rVal: pct.P, color: "bg-emerald-500" },
+                { left: "テック・仕組み (T)", right: "対話・習慣 (A)", lVal: pct.T, rVal: pct.A, color: "bg-blue-500" },
+                { left: "社会全体 (M)", right: "身近な現場 (I)", lVal: pct.M, rVal: pct.I, color: "bg-amber-500" },
+                { left: "企画・分析 (C)", right: "普及・実践 (S)", lVal: pct.C, rVal: pct.S, color: "bg-rose-500" }
+            ];
+            const metersContainer = document.getElementById('axis-meters');
+            metersContainer.innerHTML = axesConfig.map(ax => `
+                <div>
+                    <div class="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
+                        <span>${ax.left} <strong class="text-slate-800">${ax.lVal}%</strong></span>
+                        <span><strong class="text-slate-800">${ax.rVal}%</strong> ${ax.right}</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden flex">
+                        <div class="${ax.color} h-full transition-all duration-500" style="width: ${ax.lVal}%"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('partner-avatar').innerHTML = generateCharacterSVG(data.partnerCode);
+            document.getElementById('result-partner-code').innerText = data.partnerCode;
+            document.getElementById('result-partner-name').innerText = partnerData.title;
+            document.getElementById('partner-card-btn').onclick = () => openTypeModal(data.partnerCode, "🤝 相性バツグンの相棒タイプ");
+
+            const badgesContainer = document.getElementById('result-sdgs-badges');
+            badgesContainer.innerHTML = "";
+            data.sdgs.forEach(num => {
+                const sdg = sdgsMaster[num];
+                const btn = document.createElement('button');
+                btn.style.backgroundColor = sdg.color;
+                btn.className = "text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-sm hover:opacity-90 active:scale-95 transition flex items-center gap-1.5 cursor-pointer";
+                btn.innerHTML = `<span>${num}</span><span class="font-medium text-[11px] truncate max-w-[130px]">${sdg.title}</span>`;
+                btn.onclick = () => openSdgModal(num);
+                badgesContainer.appendChild(btn);
+            });
+
+            currentResultText = `私のSDGsタイプは【${typeKey}：${data.title}】でした！🌍✨ 相棒は【${data.partnerCode}：${partnerData.title}】！ #SDGs16タイプ診断`;
+        }
+
+        function openSdgModal(num) {
+            const sdg = sdgsMaster[num];
+            document.getElementById('modal-badge').innerText = num;
+            document.getElementById('modal-badge').style.backgroundColor = sdg.color;
+            document.getElementById('modal-title').innerText = sdg.title;
+            document.getElementById('modal-desc').innerText = sdg.desc;
+            document.getElementById('modal-link').href = `https://www.unic.or.jp/activities/economic_social_development/sustainable_development/2030agenda/`;
+            document.getElementById('sdgs-modal').classList.remove('hidden');
+        }
+
+        function openTypeModal(code, tagLabel = "CHARACTER PROFILE") {
+            const d = typesData[code];
+            const tStyle = themes[d.theme];
+            document.getElementById('type-modal-header').className = `p-5 text-white text-center relative ${tStyle.header}`;
+            document.getElementById('type-modal-tag').innerText = `${tagLabel} (${code})`;
+            document.getElementById('type-modal-avatar').innerHTML = generateCharacterSVG(code);
+            document.getElementById('type-modal-title').innerText = d.title;
+            document.getElementById('type-modal-catch').innerText = d.catch;
+            document.getElementById('type-modal-seal').className = `p-2.5 rounded-xl border border-dashed text-center text-xs font-extrabold ${tStyle.seal}`;
+            document.getElementById('type-modal-seal').innerText = d.seal;
+            document.getElementById('type-modal-desc').innerText = d.desc;
+
+            const sdgBox = document.getElementById('type-modal-sdgs');
+            sdgBox.innerHTML = d.sdgs.map(n => {
+                const s = sdgsMaster[n];
+                return `<span style="background-color:${s.color}" class="text-white text-[10px] font-bold px-2 py-1 rounded-lg">${n}. ${s.title}</span>`;
+            }).join('');
+
+            document.getElementById('type-modal').classList.remove('hidden');
+        }
+
+        function openCatalog() {
+            const grid = document.getElementById('catalog-grid');
+            grid.innerHTML = Object.keys(typesData).map(code => {
+                const item = typesData[code];
+                const badgeColor = { blue: "bg-blue-100 text-blue-700", green: "bg-emerald-100 text-emerald-700", yellow: "bg-amber-100 text-amber-800", red: "bg-rose-100 text-rose-700" }[item.theme];
+                return `
+                <button onclick="openTypeModal('${code}', 'SDGs 16タイプ図鑑')" class="bg-white p-3 rounded-2xl border border-slate-200/80 hover:border-emerald-400 shadow-xs text-center transition active:scale-95 flex flex-col items-center cursor-pointer">
+                    <div class="w-16 h-16 mb-1.5">${generateCharacterSVG(code)}</div>
+                    <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${badgeColor} mb-1">${code}</span>
+                    <p class="text-xs font-black text-slate-800 leading-tight line-clamp-2">${item.title}</p>
+                </button>`;
+            }).join('');
+            document.getElementById('catalog-modal').classList.remove('hidden');
+        }
+
+        function openShareCard() {
+            if (!lastResultData) return;
+            const { typeKey, data, themeStyle, partnerData, pct } = lastResultData;
+            document.getElementById('sc-header').className = `p-5 pb-6 text-white text-center relative ${themeStyle.header}`;
+            document.getElementById('sc-avatar').innerHTML = generateCharacterSVG(typeKey);
+            document.getElementById('sc-code').innerText = typeKey;
+            document.getElementById('sc-title').innerText = data.title;
+            document.getElementById('sc-seal').className = `py-2 px-3 rounded-xl border border-dashed text-center text-xs font-black ${themeStyle.seal}`;
+            document.getElementById('sc-seal').innerText = data.seal;
+            
+            document.getElementById('sc-bars').innerHTML = `
+                <div class="flex justify-between font-bold text-slate-600"><span>環境(E) ${pct.E}%</span><span>社会(P) ${pct.P}%</span></div>
+                <div class="flex justify-between font-bold text-slate-600"><span>テック(T) ${pct.T}%</span><span>習慣(A) ${pct.A}%</span></div>
+            `;
+            document.getElementById('sc-partner-avatar').innerHTML = generateCharacterSVG(data.partnerCode);
+            document.getElementById('sc-partner-name').innerText = `${data.partnerCode} ${partnerData.title}`;
+
+            document.getElementById('share-card-modal').classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function shareResult() {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(currentResultText).then(() => {
+                    alert("診断結果をクリップボードにコピーしました！SNSやLINEに貼り付けてシェアしてね📋");
+                });
+            }
+        }
+    </script>
+</body>
+</html>
